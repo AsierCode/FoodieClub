@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permitir tráfico HTTP (sin cifrar) SOLO para la IP del emulador -->
+    <!-- ¡ESTO ES SOLO PARA DESARROLLO! -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- Si usas un dispositivo físico, añade también tu IP local aquí -->
+        <!-- <domain includeSubdomains="true">TU_IP_LOCAL</domain> -->
+    </domain-config>
+
+    <!-- Configuraciones base para el resto del tráfico (HTTPS requerido) -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
