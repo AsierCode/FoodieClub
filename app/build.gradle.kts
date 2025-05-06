@@ -8,13 +8,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.foodieclub" // Revisa si es tu paquete correcto
-    compileSdk = 35
+    // ---> ASEGÚRATE DE QUE ESTE NAMESPACE SEA EL CORRECTO <---
+    namespace = "com.example.foodieclub"
+    compileSdk = 34 // Mantener SDK 34 (Estable)
 
     defaultConfig {
-        applicationId = "com.example.foodieclub" // Revisa si es tu paquete correcto
+        // ---> ASEGÚRATE DE QUE ESTE APPLICATIONID SEA EL CORRECTO <---
+        applicationId = "com.example.foodieclub"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 34 // Mantener SDK 34 (Estable)
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -32,47 +34,46 @@ android {
     }
     kotlinOptions { jvmTarget = "11" }
     buildFeatures { compose = true }
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.1" } // Verifica compatibilidad
+    // composeOptions { ... } // <-- Asegúrate que este bloque sigue eliminado
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
 
 dependencies {
-    // Core & Jetpack
+    // Core & Jetpack (Referencias a libs.versions.toml)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose) // <-- Verifica que esta línea existe
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 
-    // Compose
+    // Compose (Referencias a libs.versions.toml)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended) // Para iconos extra
+    implementation(libs.androidx.material.icons.extended)
 
-    // Coil
+    // Coil (Referencias a libs.versions.toml)
     implementation(libs.coil.compose)
 
-    // Firebase & Google
+    // Firebase & Google (Referencias a libs.versions.toml)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.storage)
-    // --- Dependencias Corregidas ---
-    implementation(libs.play.services.auth)      // Para Google Sign In
-    implementation(libs.play.services.identity)   // Para APIs de credenciales
-    // implementation(libs.play.services.auth.credentials) // <-- ELIMINADA
-    implementation(libs.firebase.ui.auth)         // FirebaseUI
+    implementation(libs.play.services.auth)
+    implementation(libs.play.services.identity)
+    implementation(libs.firebase.ui.auth)
 
-    // Retrofit & Networking
+    // Retrofit & Networking (Referencias a libs.versions.toml)
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.converter.gson)
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp.core)
     implementation(libs.okhttp.logging.interceptor)
 
-    // Tests
+    // Tests (Referencias a libs.versions.toml)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

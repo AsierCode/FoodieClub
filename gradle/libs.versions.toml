@@ -2,16 +2,18 @@
 
 [versions]
 # Android/Kotlin/Core
-agp = "8.9.1" # Ajusta según tu versión de Android Gradle Plugin
-kotlin = "2.0.21" # Ajusta según tu versión de Kotlin
-coreKtx = "1.10.1" # O 1.13.1+
+agp = "8.9.1" # Revisa tu versión de AGP
+kotlin = "2.0.21" # Revisa tu versión de Kotlin
+coreKtx = "1.10.1" # O 1.13.1+ si prefieres
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
-lifecycleRuntimeKtx = "2.6.1" # O 2.8.3+
-lifecycleViewModelKtx = "2.6.1" # O 2.8.3+
-activityCompose = "1.8.0" # O 1.9.0+
-composeBom = "2024.05.00"
+# --- VERSIONES ACTUALIZADAS ---
+lifecycleRuntimeKtx = "2.8.3" # Actualizado
+lifecycleViewModelKtx = "2.8.3" # Actualizado (mantener consistencia)
+activityCompose = "1.9.0" # Actualizado
+# --- FIN ACTUALIZACIÓN ---
+composeBom = "2024.05.00" # Manteniendo esta versión
 coil = "2.6.0"
 retrofit = "2.11.0"
 okhttp = "4.12.0"
@@ -19,11 +21,10 @@ okhttp = "4.12.0"
 # Firebase/Google
 firebaseBom = "33.1.2"
 googleGmsServices = "4.4.2"
-# --- Versiones correctas para Auth y Identity ---
-playServicesAuth = "20.7.0" # Versión estable para Auth
-playServicesIdentity = "18.0.1" # Versión estable para Identity
+playServicesAuth = "20.7.0"
+playServicesIdentity = "18.0.1"
 firebaseUi = "8.0.2"
-materialIconsExtended = "1.6.7" # Coincide con Compose UI
+materialIconsExtended = "1.6.7"
 
 
 [libraries]
@@ -32,10 +33,13 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+# --- USAN LAS NUEVAS VERSIONES ---
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" } # Usa misma ref actualizada
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewModelKtx" }
-androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelKtx" }
-androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelKtx" } # Usa misma ref actualizada
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" } # Usa ref actualizada
+# --- FIN ---
 
 # Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -55,10 +59,8 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx" }
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage-ktx" }
-# --- Dependencias Corregidas ---
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 play-services-identity = { group = "com.google.android.gms", name = "play-services-identity", version.ref = "playServicesIdentity" }
-# play-services-auth-credentials = { ... } <-- ELIMINADA
 firebase-ui-auth = { group = "com.firebaseui", name = "firebase-ui-auth", version.ref = "firebaseUi" }
 
 # Retrofit (Networking)

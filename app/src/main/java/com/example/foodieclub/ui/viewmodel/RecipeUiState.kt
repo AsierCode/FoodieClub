@@ -39,9 +39,9 @@ sealed class PublicProfileState {
     data class Error(val message: String) : PublicProfileState()
 }
 
-/** Estados posibles para la pantalla del perfil privado del usuario actual */
-sealed class MyProfileState {
-    object Loading : MyProfileState()
-    data class Success(val profile: PerfilPrivadoDto) : MyProfileState() // Contiene el DTO del perfil privado
-    data class Error(val message: String) : MyProfileState()
-}
+///** Estados posibles para la pantalla del perfil privado del usuario actual */
+//sealed class MyProfileState {
+//    object Loading : MyProfileState()
+//    data class Success(val profile: PerfilPrivadoDto) : MyProfileState() // Contiene el DTO del perfil privado
+//    data class Error(val message: String) : MyProfileState()
+//}
