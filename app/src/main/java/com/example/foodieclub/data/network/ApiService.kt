@@ -31,6 +31,12 @@ interface ApiService {
 
     // TODO: Definir endpoints PUT y DELETE para recetas si son necesarios
 
+    // --- NUEVA FUNCIÓN DE BÚSQUEDA ---
+    @GET("recetas/buscar") // Endpoint: /api/recetas/buscar
+    suspend fun searchRecipes(
+        @Query("query") searchTerm: String // Parámetro: ?query=...
+    ): List<RecetaDto> // Devuelve la lista de resultados
+    // ----------------------------------
 
     // --- Interacciones (Likes y Guardados) ---
     @POST("interacciones/like/{recetaId}")

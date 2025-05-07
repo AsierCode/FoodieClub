@@ -1,6 +1,7 @@
 package com.example.foodieclub // Revisa tu paquete
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -14,189 +15,194 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-// --- Imports de Screens ---
-import com.example.foodieclub.ui.screen.AuthNeededScreen
-import com.example.foodieclub.ui.screen.CreateRecipeScreen
-import com.example.foodieclub.ui.screen.RecipeDetailScreen
-import com.example.foodieclub.ui.screen.RecipeListScreen
-import com.example.foodieclub.ui.screen.ProfileScreen
-import com.example.foodieclub.ui.screen.MyProfileScreen // <-- Import añadido
-// --------------------------
+import androidx.compose.ui.unit.dp
+// --- Imports de Navegación ---
+import com.example.foodieclub.ui.navigation.MainAppScaffold
+// ---------------------------
 import com.example.foodieclub.ui.theme.FoodieClubTheme
-// --- Imports de ViewModels y Factory ---
+// --- Imports de ViewModels ---
 import com.example.foodieclub.ui.viewmodel.RecipeViewModel
 import com.example.foodieclub.ui.viewmodel.ProfileViewModel
 import com.example.foodieclub.ui.viewmodel.provideProfileViewModelFactory
-// --------------------------------------
+// ---------------------------
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import androidx.lifecycle.viewmodel.compose.viewModel
-
-// --- ENUM ACTUALIZADO ---
-enum class CurrentScreen { LOADING, AUTH_NEEDED, AUTH_FLOW, LIST, CREATE, DETAIL, PROFILE, MY_PROFILE }
-// -----------------------
+import androidx.lifecycle.viewmodel.compose.viewModel // Para obtener ProfileViewModel con factory
+import kotlinx.coroutines.tasks.await
 
 class MainActivity : ComponentActivity() {
 
+    // RecipeViewModel obtenido por defecto usando el delegado by viewModels()
     private val recipeViewModel: RecipeViewModel by viewModels()
+    // ProfileViewModel se obtendrá en setContent usando su factory
 
-    private val _userState = mutableStateOf<FirebaseUser?>(null)
-    private val userState: State<FirebaseUser?> = _userState
-    private val _currentScreenState = mutableStateOf(CurrentScreen.LOADING)
-    private val currentScreenState: State<CurrentScreen> = _currentScreenState
-    private val _selectedRecipeId = mutableStateOf<Long?>(null)
-    private val _selectedProfileUid = mutableStateOf<String?>(null)
+    // Estado para el usuario de Firebase y el estado de carga inicial
+    private var firebaseUser by mutableStateOf<FirebaseUser?>(null)
+    private var isLoadingAuthState by mutableStateOf(true)
 
+    // Listener de Autenticación de Firebase
     private val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-        val user = firebaseAuth.currentUser
-        val previousUserState = _userState.value
-        _userState.value = user
-        Log.d("AuthState", "Listener: Usuario: ${user?.uid}")
+        val newUser = firebaseAuth.currentUser
+        val oldUserUid = firebaseUser?.uid
+        Log.d("AuthState", "[Listener] Estado de Auth cambió. Nuevo UID: ${newUser?.uid}, Anterior UID: $oldUserUid")
 
-        if (user != null) {
-            if ((previousUserState == null && user != null) ||
-                _currentScreenState.value == CurrentScreen.LOADING ||
-                _currentScreenState.value == CurrentScreen.AUTH_NEEDED ||
-                _currentScreenState.value == CurrentScreen.AUTH_FLOW) {
-                Log.d("Navigation", "Listener: Usuario detectado/cambiado, cambiando a pantalla LIST")
-                _currentScreenState.value = CurrentScreen.LIST
-                _selectedRecipeId.value = null
-                _selectedProfileUid.value = null
-            }
-        } else {
-            if (previousUserState != null) {
-                Log.d("Navigation", "Listener: Usuario nulo (deslogueo), cambiando a pantalla AUTH_NEEDED")
-                _currentScreenState.value = CurrentScreen.AUTH_NEEDED
-                _selectedRecipeId.value = null
-                _selectedProfileUid.value = null
-                try {
-                    recipeViewModel.clearUserSpecificData()
-                } catch (e: Exception) {
-                    Log.e("ViewModelCall", "Error llamando a clearUserSpecificData", e)
-                }
-            } else if (_currentScreenState.value == CurrentScreen.LOADING) {
-                Log.d("Navigation", "Listener: Usuario nulo durante carga inicial, cambiando a AUTH_NEEDED")
-                _currentScreenState.value = CurrentScreen.AUTH_NEEDED
-            }
+        if (oldUserUid != newUser?.uid) { // Solo actualizar si el UID realmente cambió
+            firebaseUser = newUser
+            Log.d("AuthState", "[Listener] firebaseUser (propiedad de Activity) ACTUALIZADO a UID: ${firebaseUser?.uid}")
+        }
+
+        if (isLoadingAuthState) { // Solo cambiar si estaba en true
+            isLoadingAuthState = false
+            Log.d("AuthState", "[Listener] isLoadingAuthState puesto a false.")
         }
     }
 
-    private lateinit var signInLauncher: ActivityResultLauncher<android.content.Intent>
+    // Launcher para FirebaseUI Auth
+    private lateinit var signInLauncher: ActivityResultLauncher<Intent>
+
+    // --- Función para lanzar el flujo de inicio de sesión ---
+    private fun launchSignInFlow() {
+        if (!::signInLauncher.isInitialized) {
+            Log.e("AuthAction", "signInLauncher no inicializado! No se puede lanzar FirebaseUI.")
+            Toast.makeText(this, "Error al iniciar sesión (launcher).", Toast.LENGTH_SHORT).show()
+            isLoadingAuthState = false // Permitir que la UI muestre algo si esto falla
+            return
+        }
+        Log.d("AuthAction", "Lanzando FirebaseUI desde MainActivity...")
+        val providers = listOf(
+            AuthUI.IdpConfig.EmailBuilder().build(),
+            AuthUI.IdpConfig.GoogleBuilder().build()
+        )
+        val signInIntent = AuthUI.getInstance()
+            .createSignInIntentBuilder()
+            .setAvailableProviders(providers)
+            .setIsSmartLockEnabled(false)
+            .build()
+        try {
+            signInLauncher.launch(signInIntent)
+        } catch (e: Exception) {
+            Log.e("AuthAction", "Error lanzando FirebaseUI", e)
+            Toast.makeText(this, "Error iniciando autenticación.", Toast.LENGTH_SHORT).show()
+            isLoadingAuthState = false // Permitir que la UI reaccione si falla el lanzamiento
+        }
+    }
+
+    // --- Función para cerrar sesión ---
+    private fun signOut() {
+        Log.d("AuthAction", "Cerrando sesión desde MainActivity...")
+        recipeViewModel.clearUserSpecificData()
+        // El ProfileViewModel limpiará su estado cuando su idToken se establezca a null
+        AuthUI.getInstance().signOut(this).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d("AuthSignOut", "SignOut de FirebaseUI OK.")
+            } else {
+                Log.e("AuthSignOut", "Error en signOut de FirebaseUI", task.exception)
+                Toast.makeText(this, "Error al cerrar sesión.", Toast.LENGTH_SHORT).show()
+            }
+            // El AuthStateListener se encargará de actualizar firebaseUser a null
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("Lifecycle", "onCreate")
+        Log.d("Lifecycle", "MainActivity onCreate")
+
+        // Intentar obtener el usuario actual al inicio. El listener lo confirmará/actualizará.
+        firebaseUser = FirebaseAuth.getInstance().currentUser
+        Log.d("Lifecycle", "MainActivity onCreate - firebaseUser inicial: ${firebaseUser?.uid}")
+
         setContent {
             signInLauncher = rememberLauncherForActivityResult(
                 contract = FirebaseAuthUIActivityResultContract()
             ) { result -> this.onSignInResult(result) }
 
+            // Obtener ProfileViewModel usando la factory.
+            // Esta instancia será la que se use para "Mi Perfil".
             val profileViewModelFactory = provideProfileViewModelFactory()
+            val myProfileViewModel: ProfileViewModel = viewModel( // Renombrar para claridad
+                key = "main_activity_my_profile_vm", // Key opcional para esta instancia específica
+                factory = profileViewModelFactory
+            )
+            Log.d("ViewModelInstance", "[MainActivity] ProfileViewModel (para Mi Perfil) CREADO/OBTENIDO: ${myProfileViewModel.hashCode()}")
 
-            LaunchedEffect(userState.value) {
-                val currentUser = userState.value
-                Log.d("TokenUpdate", "LaunchedEffect: User state changed -> ${currentUser?.uid}")
+
+            // Efecto para actualizar tokens en ambos ViewModels cuando firebaseUser cambie
+            LaunchedEffect(firebaseUser) {
+                val currentUser = firebaseUser
+                Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] TRIGGERED. firebaseUser (capturado): ${currentUser?.uid}")
+
                 if (currentUser != null) {
-                    currentUser.getIdToken(true).addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            val newToken = task.result?.token
-                            if (newToken != null) {
-                                Log.i("TokenUpdate", "Token obtenido, actualizando ViewModel.")
-                                recipeViewModel.idToken = newToken
-                            } else { Log.e("TokenUpdate", "Token recibido es nulo."); recipeViewModel.idToken = null }
-                        } else { Log.e("TokenUpdate", "Error obteniendo token", task.exception); recipeViewModel.idToken = null }
+                    Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] currentUser NO es null (${currentUser.uid}), intentando obtener token...")
+                    try {
+                        val tokenResult = currentUser.getIdToken(true).await() // Forzar refresh
+                        val token = tokenResult.token
+                        if (token != null) {
+                            Log.i("SUPER_DEBUG_TOKEN", "[MainActivity LE] Token OBTENIDO con ÉXITO para ${currentUser.uid}. Token (primeros 20): ${token.take(20)}...")
+                            Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] Asignando token a recipeViewModel.idToken...")
+                            recipeViewModel.idToken = token
+                            Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] recipeViewModel.idToken ASIGNADO.")
+                            Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] Asignando token a myProfileViewModel (${myProfileViewModel.hashCode()}).idToken...")
+                            myProfileViewModel.idToken = token // Usar la instancia myProfileViewModel
+                            Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] myProfileViewModel.idToken ASIGNADO.")
+                        } else {
+                            Log.w("SUPER_DEBUG_TOKEN", "[MainActivity LE] getIdToken(true) devolvió un token NULO para ${currentUser.uid}.")
+                            recipeViewModel.idToken = null
+                            myProfileViewModel.idToken = null
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SUPER_DEBUG_TOKEN", "[MainActivity LE] EXCEPCIÓN obteniendo token para ${currentUser.uid}", e)
+                        recipeViewModel.idToken = null
+                        myProfileViewModel.idToken = null
                     }
-                } else { recipeViewModel.idToken = null; Log.d("TokenUpdate", "Token limpiado.") }
-            }
-
-            val currentScreen by currentScreenState
-            val selectedRecipeId by _selectedRecipeId
-            val selectedProfileUid by _selectedProfileUid
-
-            LaunchedEffect(currentScreen) {
-                if (currentScreen == CurrentScreen.AUTH_NEEDED) {
-                    _currentScreenState.value = CurrentScreen.AUTH_FLOW
-                    Log.d("Navigation", "Estado AUTH_NEEDED, lanzando FirebaseUI...")
-                    launchSignInFlow(signInLauncher)
+                } else {
+                    Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] currentUser ES NULL. Limpiando tokens en VMs.")
+                    recipeViewModel.idToken = null
+                    myProfileViewModel.idToken = null
                 }
             }
 
             FoodieClubTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    Log.d("UI", "Recomponiendo para estado: $currentScreen")
+                    val currentFirebaseUser = firebaseUser
+                    val currentIsLoadingAuthState = isLoadingAuthState
+                    Log.d("UIState", "[MainActivity Recompose] isLoading: $currentIsLoadingAuthState, user: ${currentFirebaseUser?.uid}")
 
-                    when (currentScreen) {
-                        CurrentScreen.LOADING, CurrentScreen.AUTH_FLOW -> {
-                            Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
-                        }
-                        CurrentScreen.AUTH_NEEDED -> {
-                            AuthNeededScreen {
-                                _currentScreenState.value = CurrentScreen.AUTH_FLOW
-                                launchSignInFlow(signInLauncher)
+                    when {
+                        currentIsLoadingAuthState -> {
+                            Log.d("UIState", "Mostrando: Carga Inicial Auth (Spinner)")
+                            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                                CircularProgressIndicator()
+                                Text("Verificando sesión...", modifier = Modifier.padding(top = 60.dp))
                             }
                         }
-                        CurrentScreen.LIST -> {
-                            RecipeListScreen(
-                                recipeViewModel = recipeViewModel,
-                                onSignOutClick = { signOut() },
-                                onRecipeClick = { id -> navigateToDetail(id) },
-                                onAddRecipeClick = { navigateToCreate() },
-                                onNavigateToProfile = { userId -> navigateToProfile(userId) }
-                                // Aquí podrías añadir un botón/acción para ir a Mi Perfil
-                                // Por ejemplo, en la TopAppBar de RecipeListScreen o una BottomBar
+                        currentFirebaseUser != null -> {
+                            Log.d("UIState", "Mostrando: MainAppScaffold (Usuario: ${currentFirebaseUser.uid})")
+                            // --- PASAR LAS INSTANCIAS CORRECTAS A MainAppScaffold ---
+                            MainAppScaffold(
+                                recipeViewModel = recipeViewModel,         // Instancia de RecipeVM de la Activity
+                                profileViewModel = myProfileViewModel,    // Instancia de ProfileVM (para Mi Perfil) de la Activity
+                                onSignOut = ::signOut
                             )
+                            // ---------------------------------------------------------
                         }
-                        CurrentScreen.CREATE -> {
-                            CreateRecipeScreen(
-                                recipeViewModel = recipeViewModel,
-                                onNavigateBack = { navigateBackToList() }
-                            )
-                        }
-                        CurrentScreen.DETAIL -> {
-                            if (selectedRecipeId != null) {
-                                RecipeDetailScreen(
-                                    recipeId = selectedRecipeId!!,
-                                    recipeViewModel = recipeViewModel,
-                                    onNavigateBack = { navigateBackToList() },
-                                    onNavigateToProfile = { userId -> navigateToProfile(userId) }
-                                )
-                            } else {
-                                LaunchedEffect(Unit) { navigateBackToList() }
-                                Box(Modifier.fillMaxSize(), Alignment.Center){ CircularProgressIndicator() }
+                        else -> { // firebaseUser es null y isLoadingAuthState es false
+                            Log.d("UIState", "Mostrando: Flujo de Login (Usuario No Logueado)")
+                            var hasAttemptedSignIn by remember { mutableStateOf(false) }
+                            if (!hasAttemptedSignIn) {
+                                LaunchedEffect(Unit) {
+                                    Log.d("UIState", "firebaseUser null & !isLoadingAuthState, llamando a launchSignInFlow() (intento único).")
+                                    launchSignInFlow()
+                                    hasAttemptedSignIn = true
+                                }
+                            }
+                            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                                CircularProgressIndicator()
+                                Text("Iniciando sesión...", modifier = Modifier.padding(top = 60.dp))
                             }
                         }
-                        CurrentScreen.PROFILE -> {
-                            if (selectedProfileUid != null) {
-                                val profileViewModel: ProfileViewModel = viewModel(
-                                    key = "profile_$selectedProfileUid",
-                                    factory = profileViewModelFactory
-                                )
-                                ProfileScreen(
-                                    firebaseUid = selectedProfileUid!!,
-                                    viewModel = profileViewModel,
-                                    onNavigateToRecipeDetail = { recipeId -> navigateToDetail(recipeId) },
-                                    onNavigateBack = { navigateBackFromProfile() }
-                                )
-                            } else {
-                                Log.e("Navigation", "Se intentó ir a PROFILE sin UID.")
-                                LaunchedEffect(Unit) { navigateBackToList() }
-                                Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
-                            }
-                        }
-                        // --- NUEVO CASO PARA MY_PROFILE ---
-                        CurrentScreen.MY_PROFILE -> {
-                            MyProfileScreen(
-                                viewModel = recipeViewModel, // Usa el mismo ViewModel
-                                onNavigateToRecipeDetail = { recipeId -> navigateToDetail(recipeId) },
-                                onSignOutClick = { signOut() }
-                                // Podrías necesitar un onNavigateBack si la TopAppBar no lo maneja
-                                // onNavigateBack = { navigateBackToList() }
-                            )
-                        }
-                        // ---------------------------------
                     }
                 }
             }
@@ -206,96 +212,23 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         FirebaseAuth.getInstance().addAuthStateListener(authStateListener)
-        Log.d("Lifecycle", "Auth listener registrado")
+        Log.d("Lifecycle", "MainActivity onStart: Auth listener registrado.")
     }
-
     override fun onStop() {
         super.onStop()
         FirebaseAuth.getInstance().removeAuthStateListener(authStateListener)
-        Log.d("Lifecycle", "Auth listener quitado")
+        Log.d("Lifecycle", "MainActivity onStop: Auth listener quitado")
     }
 
-    // --- Funciones de Autenticación ---
     private fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
         val response = result.idpResponse
+        isLoadingAuthState = false
         if (result.resultCode == Activity.RESULT_OK) {
-            Log.d("AuthSuccess", "Login/Registro OK (Listener cambiará a LIST).")
-            FirebaseAuth.getInstance().currentUser?.getIdToken(true)?.addOnCompleteListener { task ->
-                if(task.isSuccessful) Log.i("AuthSuccess", "Token inmediato OK")
-                else Log.e("AuthSuccess", "Error token inmediato", task.exception)
-            }
+            Log.d("AuthResult", "Login/Registro OK. AuthStateListener actualizará firebaseUser.")
         } else {
             Log.w("AuthResult", "FirebaseUI falló o cancelado. Código: ${result.resultCode}")
-            if (response?.error != null) Log.e("AuthError", "Error FirebaseUI: ${response.error?.errorCode}", response.error)
-            Toast.makeText(this, "Autenticación fallida o cancelada.", Toast.LENGTH_SHORT).show()
-            if (_currentScreenState.value == CurrentScreen.AUTH_FLOW) {
-                _currentScreenState.value = CurrentScreen.AUTH_NEEDED
-            }
+            if (response == null) { Toast.makeText(this, "Inicio de sesión cancelado.", Toast.LENGTH_SHORT).show() }
+            else if (response.error != null) { Log.e("AuthResult", "Error FirebaseUI: ${response.error?.errorCode} - ${response.error?.localizedMessage}", response.error); Toast.makeText(this, "Error de autenticación: ${response.error?.localizedMessage}", Toast.LENGTH_LONG).show() }
         }
     }
-
-    private fun launchSignInFlow(launcher: ActivityResultLauncher<android.content.Intent>) {
-        val providers = listOf(AuthUI.IdpConfig.EmailBuilder().build(), AuthUI.IdpConfig.GoogleBuilder().build())
-        val signInIntent = AuthUI.getInstance().createSignInIntentBuilder().setAvailableProviders(providers).setIsSmartLockEnabled(false).build()
-        try { launcher.launch(signInIntent); Log.d("AuthAction", "Intent FirebaseUI lanzado.") }
-        catch (e: Exception) {
-            Log.e("AuthAction", "Error lanzando FirebaseUI", e)
-            Toast.makeText(this, "Error iniciando autenticación.", Toast.LENGTH_SHORT).show()
-            _currentScreenState.value = CurrentScreen.AUTH_NEEDED
-        }
-    }
-
-    private fun signOut() {
-        Log.d("AuthAction", "Iniciando cierre de sesión...")
-        AuthUI.getInstance().signOut(this).addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                Log.d("AuthSignOut", "SignOut OK (Listener cambiará a AUTH_NEEDED).")
-            } else {
-                Log.e("AuthSignOut", "Error en signOut", task.exception)
-                Toast.makeText(this, "Error al cerrar sesión.", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    // --- Funciones de Navegación ---
-    private fun navigateBackToList() {
-        Log.d("Navigation", "Navegando de vuelta a LIST")
-        _currentScreenState.value = CurrentScreen.LIST
-        _selectedRecipeId.value = null
-        _selectedProfileUid.value = null
-    }
-
-    private fun navigateToCreate() {
-        Log.d("Navigation", "Navegando a CREATE")
-        _currentScreenState.value = CurrentScreen.CREATE
-    }
-
-    private fun navigateToDetail(recipeId: Long) {
-        Log.d("Navigation", "Navegando a DETAIL para receta ID: $recipeId")
-        _selectedRecipeId.value = recipeId
-        _currentScreenState.value = CurrentScreen.DETAIL
-    }
-
-    private fun navigateToProfile(userId: String) {
-        Log.d("Navigation", "Navegando a PROFILE para usuario UID: $userId")
-        _selectedProfileUid.value = userId
-        _currentScreenState.value = CurrentScreen.PROFILE
-    }
-
-    // --- FUNCIÓN PARA IR A MI PERFIL ---
-    private fun navigateToMyProfile() {
-        Log.d("Navigation", "Navegando a MY_PROFILE")
-        _currentScreenState.value = CurrentScreen.MY_PROFILE
-        _selectedRecipeId.value = null
-        _selectedProfileUid.value = null
-    }
-    // ----------------------------------
-
-    private fun navigateBackFromProfile() {
-        // Decide a dónde volver, LIST es lo más simple por ahora
-        Log.d("Navigation", "Navegando atrás desde PROFILE")
-        _currentScreenState.value = CurrentScreen.LIST
-        _selectedProfileUid.value = null
-    }
-
-} // Fin MainActivity
+}

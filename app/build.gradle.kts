@@ -57,6 +57,7 @@ dependencies {
 
     // Coil (Referencias a libs.versions.toml)
     implementation(libs.coil.compose)
+    implementation(libs.androidx.navigation.compose)
 
     // Firebase & Google (Referencias a libs.versions.toml)
     implementation(platform(libs.firebase.bom))
