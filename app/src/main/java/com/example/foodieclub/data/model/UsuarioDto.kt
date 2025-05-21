@@ -1,9 +1,10 @@
-package com.example.foodieclub.data.model // Revisa tu paquete
+package com.example.foodieclub.data.model
 
-// No necesita Parcelable si solo es para Retrofit/Compose State
+import com.google.gson.annotations.SerializedName
+
 data class UsuarioDto(
-    val firebaseUid: String?, // Nullable por si acaso
-    val email: String?,
-    val nombreMostrado: String?,
-    val fotoUrl: String?
+    @SerializedName("firebaseUid") val firebaseUid: String?,
+    @SerializedName("email") val email: String?,
+    @SerializedName("nombreMostrado") val nombreMostrado: String?,
+    @SerializedName("fotoUrl") val fotoUrl: String?
 )

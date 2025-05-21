@@ -32,12 +32,9 @@ sealed class CreateRecipeState {
 }
 
 /** Estado para la pantalla de detalle de una receta específica */
-data class RecipeDetailState(
-    val isLoading: Boolean = true,
-    val recipe: RecetaDto? = null,
-    val comments: List<ComentarioDto> = emptyList(),
-    val errorMessage: String? = null
-)
+// Dentro de RecipeUiState.kt (o donde esté definida tu clase)
+
+// Tus otras definiciones de estado (RecipeListState, CreateRecipeState)
 
 /** Estados posibles para la pantalla de perfil público de un usuario */
 sealed class PublicProfileState {

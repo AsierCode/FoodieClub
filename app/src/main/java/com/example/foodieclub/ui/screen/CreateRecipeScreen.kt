@@ -85,7 +85,8 @@ fun CreateRecipeScreen(
                     IconButton(onClick = onNavigateBack) { // Usa el callback recibido
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver")
                     }
-                }
+                },
+                windowInsets = WindowInsets(top = 2.dp) // <-- CAMBIO APLICADO AQUÍ
             )
         }
     ) { paddingValues ->
@@ -131,7 +132,7 @@ fun CreateRecipeScreen(
                 value = steps,
                 onValueChange = { steps = it },
                 label = { Text("Pasos* (uno por línea)") },
-                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 150.dp),
+                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp),
                 isError = steps.isBlank() && createRecipeState is CreateRecipeState.Error
             )
             Spacer(modifier = Modifier.height(8.dp))

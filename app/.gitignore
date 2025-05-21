@@ -1,1 +1,8 @@
 /build
+local.properties # Contiene SDK.dir y otras propiedades locales, incluyendo tus claves de firma
+gradle.properties # ¡¡IMPORTANTE!! Si guardas aquí las contraseñas del keystore
+# Keystore files (¡MUY IMPORTANTE!)
+*.jks
+*.keystore
+# Si usas un nombre específico para tu keystore, puedes añadirlo:
+# foodieclub_release.jks

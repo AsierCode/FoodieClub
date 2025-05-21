@@ -10,7 +10,7 @@ object RetrofitClient {
 
     // --- IMPORTANTE: URL BASE DE TU API ---
     // Si pruebas en Emulador Android, usa 10.0.2.2 para referirte al localhost de tu PC
-    private const val BASE_URL_EMULATOR = "http://10.0.2.2:8080/api/"
+    private const val BASE_URL_EMULATOR = "https://foodieclub-api-asier-4dc04d8370e7.herokuapp.com/api/"
     // Si pruebas en un dispositivo físico conectado a la MISMA red Wi-Fi que tu PC:
     // 1. Averigua la IP local de tu PC (ej. en Windows: ipconfig, en macOS/Linux: ifconfig o ip addr)
     // 2. Reemplaza "TU_IP_LOCAL" por esa IP. Ejemplo: "http://192.168.1.100:8080/api/"

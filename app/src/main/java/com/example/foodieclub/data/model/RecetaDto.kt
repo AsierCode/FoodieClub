@@ -1,20 +1,19 @@
-package com.example.foodieclub.data.model // Revisa tu paquete
+package com.example.foodieclub.data.model
 
-// Asegúrate que los nombres de campo coinciden EXACTAMENTE con el JSON de la API
+import com.google.gson.annotations.SerializedName
+
 data class RecetaDto(
-    val id: Long?, // Nullable por si acaso
-    val titulo: String?,
-    val descripcion: String?,
-    val ingredientes: String?, // Mantenemos como String
-    val pasos: String?,       // Mantenemos como String
-    val tiempoPreparacion: Int?,
-    val numRaciones: Int?,
-    val usuario: UsuarioDto?, // Referencia al DTO de Usuario
-    val imagenUrl: String?,
-    // Para las fechas, recibirlas como String es lo más simple con Gson.
-    // Podríamos añadir lógica de parseo después si necesitamos objetos Date/LocalDateTime.
-    val fechaCreacion: String?,
-    val fechaActualizacion: String?,
-    val likesCount: Int? = 0, // Valor por defecto si es null
-    val guardadosCount: Int? = 0 // Valor por defecto si es null
+    @SerializedName("id") val id: Long?,
+    @SerializedName("titulo") val titulo: String?,
+    @SerializedName("descripcion") val descripcion: String?,
+    @SerializedName("ingredientes") val ingredientes: String?,
+    @SerializedName("pasos") val pasos: String?,
+    @SerializedName("tiempoPreparacion") val tiempoPreparacion: Int?,
+    @SerializedName("numRaciones") val numRaciones: Int?,
+    @SerializedName("usuario") val usuario: UsuarioDto?,
+    @SerializedName("imagenUrl") val imagenUrl: String?,
+    @SerializedName("fechaCreacion") val fechaCreacion: String?,
+    @SerializedName("fechaActualizacion") val fechaActualizacion: String?,
+    @SerializedName("likesCount") val likesCount: Int? = 0,
+    @SerializedName("guardadosCount") val guardadosCount: Int? = 0
 )

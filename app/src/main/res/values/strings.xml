@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">FoodieClub</string>
+    <string name="default_web_client_id" translatable="false">221413400181-51m5m48dm579hd12tl11nepklu142jd8.apps.googleusercontent.com</string>
 </resources>

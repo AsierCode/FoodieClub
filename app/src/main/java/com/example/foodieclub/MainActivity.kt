@@ -1,234 +1,267 @@
-package com.example.foodieclub // Revisa tu paquete
+package com.example.foodieclub
 
+// import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult // Comentado si onSignInResult no se usa activamente
 import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-// --- Imports de Navegación ---
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.foodieclub.ui.navigation.MainAppScaffold
-// ---------------------------
+import com.example.foodieclub.ui.navigation.Screen
+import com.example.foodieclub.ui.navigation.authGraph
 import com.example.foodieclub.ui.theme.FoodieClubTheme
-// --- Imports de ViewModels ---
-import com.example.foodieclub.ui.viewmodel.RecipeViewModel
+import com.example.foodieclub.ui.viewmodel.AuthState
+import com.example.foodieclub.ui.viewmodel.AuthViewModel
 import com.example.foodieclub.ui.viewmodel.ProfileViewModel
+import com.example.foodieclub.ui.viewmodel.RecipeViewModel
+import com.example.foodieclub.ui.viewmodel.SettingsViewModel
 import com.example.foodieclub.ui.viewmodel.provideProfileViewModelFactory
-// ---------------------------
-import com.firebase.ui.auth.AuthUI
-import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
-import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import androidx.lifecycle.viewmodel.compose.viewModel // Para obtener ProfileViewModel con factory
+import com.google.firebase.remoteconfig.remoteConfig
+import com.google.firebase.remoteconfig.remoteConfigSettings
 import kotlinx.coroutines.tasks.await
 
 class MainActivity : ComponentActivity() {
 
-    // RecipeViewModel obtenido por defecto usando el delegado by viewModels()
     private val recipeViewModel: RecipeViewModel by viewModels()
-    // ProfileViewModel se obtendrá en setContent usando su factory
-
-    // Estado para el usuario de Firebase y el estado de carga inicial
     private var firebaseUser by mutableStateOf<FirebaseUser?>(null)
     private var isLoadingAuthState by mutableStateOf(true)
 
-    // Listener de Autenticación de Firebase
     private val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
         val newUser = firebaseAuth.currentUser
         val oldUserUid = firebaseUser?.uid
-        Log.d("AuthState", "[Listener] Estado de Auth cambió. Nuevo UID: ${newUser?.uid}, Anterior UID: $oldUserUid")
-
-        if (oldUserUid != newUser?.uid) { // Solo actualizar si el UID realmente cambió
-            firebaseUser = newUser
-            Log.d("AuthState", "[Listener] firebaseUser (propiedad de Activity) ACTUALIZADO a UID: ${firebaseUser?.uid}")
-        }
-
-        if (isLoadingAuthState) { // Solo cambiar si estaba en true
-            isLoadingAuthState = false
-            Log.d("AuthState", "[Listener] isLoadingAuthState puesto a false.")
-        }
+        if (oldUserUid != newUser?.uid) { firebaseUser = newUser }
+        if (isLoadingAuthState) { isLoadingAuthState = false; Log.d("AuthState", "[Listener] isLoadingAuthState -> false") }
     }
 
-    // Launcher para FirebaseUI Auth
-    private lateinit var signInLauncher: ActivityResultLauncher<Intent>
+    private lateinit var oneTapLauncher: ActivityResultLauncher<IntentSenderRequest>
 
-    // --- Función para lanzar el flujo de inicio de sesión ---
-    private fun launchSignInFlow() {
-        if (!::signInLauncher.isInitialized) {
-            Log.e("AuthAction", "signInLauncher no inicializado! No se puede lanzar FirebaseUI.")
-            Toast.makeText(this, "Error al iniciar sesión (launcher).", Toast.LENGTH_SHORT).show()
-            isLoadingAuthState = false // Permitir que la UI muestre algo si esto falla
-            return
-        }
-        Log.d("AuthAction", "Lanzando FirebaseUI desde MainActivity...")
-        val providers = listOf(
-            AuthUI.IdpConfig.EmailBuilder().build(),
-            AuthUI.IdpConfig.GoogleBuilder().build()
-        )
-        val signInIntent = AuthUI.getInstance()
-            .createSignInIntentBuilder()
-            .setAvailableProviders(providers)
-            .setIsSmartLockEnabled(false)
-            .build()
-        try {
-            signInLauncher.launch(signInIntent)
-        } catch (e: Exception) {
-            Log.e("AuthAction", "Error lanzando FirebaseUI", e)
-            Toast.makeText(this, "Error iniciando autenticación.", Toast.LENGTH_SHORT).show()
-            isLoadingAuthState = false // Permitir que la UI reaccione si falla el lanzamiento
-        }
-    }
-
-    // --- Función para cerrar sesión ---
-    private fun signOut() {
-        Log.d("AuthAction", "Cerrando sesión desde MainActivity...")
+    private fun signOut(authViewModel: AuthViewModel?) {
         recipeViewModel.clearUserSpecificData()
-        // El ProfileViewModel limpiará su estado cuando su idToken se establezca a null
-        AuthUI.getInstance().signOut(this).addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                Log.d("AuthSignOut", "SignOut de FirebaseUI OK.")
-            } else {
-                Log.e("AuthSignOut", "Error en signOut de FirebaseUI", task.exception)
-                Toast.makeText(this, "Error al cerrar sesión.", Toast.LENGTH_SHORT).show()
-            }
-            // El AuthStateListener se encargará de actualizar firebaseUser a null
-        }
+        // profileViewModel.clearProfileData() // Si tienes una función para limpiar datos del perfil, llámala aquí
+        authViewModel?.resetAuthState()
+        FirebaseAuth.getInstance().signOut()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("Lifecycle", "MainActivity onCreate")
+        enableEdgeToEdge() // Mantenlo si usas status bar transparente
 
-        // Intentar obtener el usuario actual al inicio. El listener lo confirmará/actualizará.
         firebaseUser = FirebaseAuth.getInstance().currentUser
-        Log.d("Lifecycle", "MainActivity onCreate - firebaseUser inicial: ${firebaseUser?.uid}")
+        initializeRemoteConfig()
 
         setContent {
-            signInLauncher = rememberLauncherForActivityResult(
-                contract = FirebaseAuthUIActivityResultContract()
-            ) { result -> this.onSignInResult(result) }
-
-            // Obtener ProfileViewModel usando la factory.
-            // Esta instancia será la que se use para "Mi Perfil".
+            // --- Inicializar ViewModels ---
+            val authViewModel: AuthViewModel = viewModel()
             val profileViewModelFactory = provideProfileViewModelFactory()
-            val myProfileViewModel: ProfileViewModel = viewModel( // Renombrar para claridad
-                key = "main_activity_my_profile_vm", // Key opcional para esta instancia específica
-                factory = profileViewModelFactory
-            )
-            Log.d("ViewModelInstance", "[MainActivity] ProfileViewModel (para Mi Perfil) CREADO/OBTENIDO: ${myProfileViewModel.hashCode()}")
+            val profileViewModel: ProfileViewModel = viewModel(factory = profileViewModelFactory)
+            val settingsViewModel: SettingsViewModel = viewModel() // Obtener SettingsViewModel
 
 
-            // Efecto para actualizar tokens en ambos ViewModels cuando firebaseUser cambie
-            LaunchedEffect(firebaseUser) {
-                val currentUser = firebaseUser
-                Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] TRIGGERED. firebaseUser (capturado): ${currentUser?.uid}")
+            // --- Observar la preferencia del tema ---
+            val currentThemePreference by settingsViewModel.currentThemePreference.collectAsStateWithLifecycle()
 
-                if (currentUser != null) {
-                    Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] currentUser NO es null (${currentUser.uid}), intentando obtener token...")
-                    try {
-                        val tokenResult = currentUser.getIdToken(true).await() // Forzar refresh
-                        val token = tokenResult.token
-                        if (token != null) {
-                            Log.i("SUPER_DEBUG_TOKEN", "[MainActivity LE] Token OBTENIDO con ÉXITO para ${currentUser.uid}. Token (primeros 20): ${token.take(20)}...")
-                            Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] Asignando token a recipeViewModel.idToken...")
-                            recipeViewModel.idToken = token
-                            Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] recipeViewModel.idToken ASIGNADO.")
-                            Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] Asignando token a myProfileViewModel (${myProfileViewModel.hashCode()}).idToken...")
-                            myProfileViewModel.idToken = token // Usar la instancia myProfileViewModel
-                            Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] myProfileViewModel.idToken ASIGNADO.")
-                        } else {
-                            Log.w("SUPER_DEBUG_TOKEN", "[MainActivity LE] getIdToken(true) devolvió un token NULO para ${currentUser.uid}.")
-                            recipeViewModel.idToken = null
-                            myProfileViewModel.idToken = null
-                        }
-                    } catch (e: Exception) {
-                        Log.e("SUPER_DEBUG_TOKEN", "[MainActivity LE] EXCEPCIÓN obteniendo token para ${currentUser.uid}", e)
-                        recipeViewModel.idToken = null
-                        myProfileViewModel.idToken = null
-                    }
+            // Log para depurar el cambio de currentThemePreference en MainActivity
+            LaunchedEffect(currentThemePreference) {
+            }
+            // -------------------------------------
+
+            // --- Inicializar Launcher para Google One Tap ---
+            oneTapLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.StartIntentSenderForResult()
+            ) { result ->
+                if (result.resultCode == Activity.RESULT_OK) { // Usar Activity.RESULT_OK
+                    authViewModel.handleGoogleSignInResult(result.data)
                 } else {
-                    Log.d("SUPER_DEBUG_TOKEN", "[MainActivity LE] currentUser ES NULL. Limpiando tokens en VMs.")
-                    recipeViewModel.idToken = null
-                    myProfileViewModel.idToken = null
+                    authViewModel.resetAuthState()
                 }
             }
+            // -------------------------------------------
 
-            FoodieClubTheme {
+            // --- Efecto para manejar el token de Firebase ---
+            LaunchedEffect(firebaseUser) {
+                val currentUser = firebaseUser
+                if (currentUser != null) {
+                    try {
+                        val tokenResult = currentUser.getIdToken(true).await()
+                        val token = tokenResult.token
+                        if (token != null) {
+                            recipeViewModel.idToken = token
+                            profileViewModel.idToken = token
+                        } else {
+                            recipeViewModel.idToken = null; profileViewModel.idToken = null
+                        }
+                    } catch (e: Exception) {
+                        recipeViewModel.idToken = null; profileViewModel.idToken = null
+                    }
+                } else {
+                    recipeViewModel.idToken = null; profileViewModel.idToken = null
+                }
+            }
+            // -----------------------------------------
+
+            // --- Observar el estado de AuthViewModel para lanzar Google One Tap ---
+            val authState by authViewModel.authState.collectAsStateWithLifecycle()
+            LaunchedEffect(authState) {
+                if (authState is AuthState.OneTapSignInAvailable) {
+                    try {
+                        val intentSenderRequest = IntentSenderRequest.Builder((authState as AuthState.OneTapSignInAvailable).intentSender).build()
+                        oneTapLauncher.launch(intentSenderRequest)
+                        authViewModel.resetAuthState() // Resetear después de lanzar
+                    } catch (e: Exception) {
+                        Toast.makeText(this@MainActivity, "Error con Google: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        authViewModel.resetAuthState()
+                    }
+                }
+            }
+            // -------------------------------------------------------------------
+
+            // --- Aplicar el tema y construir la UI ---
+
+            FoodieClubTheme(
+                userThemePreference = currentThemePreference,
+                // dynamicColor = true, // O tu valor por defecto
+            ) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    val currentFirebaseUser = firebaseUser
-                    val currentIsLoadingAuthState = isLoadingAuthState
-                    Log.d("UIState", "[MainActivity Recompose] isLoading: $currentIsLoadingAuthState, user: ${currentFirebaseUser?.uid}")
+                    val currentFirebaseUser = firebaseUser // Capturar para la lógica de UI
+                    val currentIsLoadingAuthState = isLoadingAuthState // Capturar para la lógica de UI
 
-                    when {
-                        currentIsLoadingAuthState -> {
-                            Log.d("UIState", "Mostrando: Carga Inicial Auth (Spinner)")
-                            Box(Modifier.fillMaxSize(), Alignment.Center) {
-                                CircularProgressIndicator()
-                                Text("Verificando sesión...", modifier = Modifier.padding(top = 60.dp))
+                    val navController = rememberNavController()
+                    NavHost(
+                        navController = navController,
+                        startDestination = remember(currentFirebaseUser, currentIsLoadingAuthState) { // Clave para estabilidad
+                            if (!currentIsLoadingAuthState) {
+                                if (currentFirebaseUser == null) Screen.AuthRoot.route else Screen.MainRoot.route
+                            } else {
+                                Screen.AuthRoot.route // Podría ser una pantalla Splash dedicada si prefieres
                             }
                         }
-                        currentFirebaseUser != null -> {
-                            Log.d("UIState", "Mostrando: MainAppScaffold (Usuario: ${currentFirebaseUser.uid})")
-                            // --- PASAR LAS INSTANCIAS CORRECTAS A MainAppScaffold ---
-                            MainAppScaffold(
-                                recipeViewModel = recipeViewModel,         // Instancia de RecipeVM de la Activity
-                                profileViewModel = myProfileViewModel,    // Instancia de ProfileVM (para Mi Perfil) de la Activity
-                                onSignOut = ::signOut
-                            )
-                            // ---------------------------------------------------------
-                        }
-                        else -> { // firebaseUser es null y isLoadingAuthState es false
-                            Log.d("UIState", "Mostrando: Flujo de Login (Usuario No Logueado)")
-                            var hasAttemptedSignIn by remember { mutableStateOf(false) }
-                            if (!hasAttemptedSignIn) {
-                                LaunchedEffect(Unit) {
-                                    Log.d("UIState", "firebaseUser null & !isLoadingAuthState, llamando a launchSignInFlow() (intento único).")
-                                    launchSignInFlow()
-                                    hasAttemptedSignIn = true
+                    ) {
+                        authGraph(
+                            navController = navController,
+                            onLoginSuccess = {
+                                navController.navigate(Screen.MainRoot.route) {
+                                    popUpTo(Screen.AuthRoot.route) { inclusive = true }
+                                    launchSingleTop = true
                                 }
                             }
-                            Box(Modifier.fillMaxSize(), Alignment.Center) {
-                                CircularProgressIndicator()
-                                Text("Iniciando sesión...", modifier = Modifier.padding(top = 60.dp))
+                        )
+                        composable(Screen.MainRoot.route) {
+                            if (currentFirebaseUser != null && !currentIsLoadingAuthState) {
+                                MainAppScaffold(
+                                    recipeViewModel = recipeViewModel,
+                                    profileViewModel = profileViewModel,
+                                    settingsViewModel = settingsViewModel, // Pasar la instancia correcta
+                                    onSignOut = { signOut(authViewModel) }
+                                )
+                            } else if (!currentIsLoadingAuthState) { // Solo redirigir si no está cargando
+                                LaunchedEffect(Unit) { // LaunchedEffect para navegación segura
+                                    navController.navigate(Screen.AuthRoot.route) {
+                                        popUpTo(Screen.MainRoot.route) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
                             }
+                            // El overlay de carga se maneja abajo
+                        }
+                    } // Fin NavHost
+
+                    // --- SPINNER DE CARGA INICIAL (Overlay) ---
+                    if (currentIsLoadingAuthState) {
+                        Box(
+                            Modifier.fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)), // Más opacidad para que se note
+                            Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                            Text(
+                                "Verificando sesión...",
+                                modifier = Modifier.padding(top = 80.dp),
+                                color = MaterialTheme.colorScheme.onSurface // Para que el texto sea visible
+                            )
                         }
                     }
+                    // -----------------------------------------
                 }
             }
         }
     } // Fin onCreate
 
+    private fun initializeRemoteConfig() {
+        val remoteConfig = Firebase.remoteConfig // Obtener instancia
+
+        // 1. Configurar ajustes (intervalo mínimo de fetch)
+        // Para desarrollo, un intervalo bajo (ej. 0 o 60 segundos) es útil.
+        // Para producción, usa un valor más alto (ej. 3600 segundos = 1 hora o más).
+        val configSettings = remoteConfigSettings {
+            minimumFetchIntervalInSeconds = 0
+        }
+        remoteConfig.setConfigSettingsAsync(configSettings)
+
+        // 2. Establecer valores predeterminados desde un archivo XML
+        // Esto asegura que la app tenga valores si no puede conectarse o es la primera vez.
+        remoteConfig.setDefaultsAsync(R.xml.remote_config_defaults) // <-- NECESITARÁS CREAR ESTE ARCHIVO XML
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    // 3. Obtener y activar los últimos valores
+                    fetchAndActivateRemoteConfigValues()
+                } else {
+                }
+            }
+    }
+
+    // --- NUEVA FUNCIÓN PARA OBTENER Y ACTIVAR VALORES ---
+    private fun fetchAndActivateRemoteConfigValues() {
+        val remoteConfig = Firebase.remoteConfig
+        remoteConfig.fetchAndActivate()
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    val updated = task.result
+                    recipeViewModel.setRemoteConfigInstance(remoteConfig)
+                    // ----------------------------------------
+                } else {
+                    recipeViewModel.setRemoteConfigInstance(remoteConfig)
+                }
+            }
+    }
+
     override fun onStart() {
         super.onStart()
         FirebaseAuth.getInstance().addAuthStateListener(authStateListener)
-        Log.d("Lifecycle", "MainActivity onStart: Auth listener registrado.")
     }
+
     override fun onStop() {
         super.onStop()
         FirebaseAuth.getInstance().removeAuthStateListener(authStateListener)
-        Log.d("Lifecycle", "MainActivity onStop: Auth listener quitado")
-    }
-
-    private fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
-        val response = result.idpResponse
-        isLoadingAuthState = false
-        if (result.resultCode == Activity.RESULT_OK) {
-            Log.d("AuthResult", "Login/Registro OK. AuthStateListener actualizará firebaseUser.")
-        } else {
-            Log.w("AuthResult", "FirebaseUI falló o cancelado. Código: ${result.resultCode}")
-            if (response == null) { Toast.makeText(this, "Inicio de sesión cancelado.", Toast.LENGTH_SHORT).show() }
-            else if (response.error != null) { Log.e("AuthResult", "Error FirebaseUI: ${response.error?.errorCode} - ${response.error?.localizedMessage}", response.error); Toast.makeText(this, "Error de autenticación: ${response.error?.localizedMessage}", Toast.LENGTH_LONG).show() }
-        }
     }
 }

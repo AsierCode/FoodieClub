@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-
-</PreferenceScreen>
+<!-- Define los valores predeterminados para Firebase Remote Config -->
+<defaultsMap>
+    <entry>
+        <key>featured_recipe_id</key>
+        <!-- Valor por defecto si no se obtiene nada de Firebase -->
+        <value>-10</value>
+    </entry>
+    <!-- Puedes añadir más parámetros predeterminados aquí si los necesitas -->
+    <!-- <entry>
+        <key>welcome_message</key>
+        <value>Bienvenido a FoodieClub!</value>
+    </entry> -->
+</defaultsMap>

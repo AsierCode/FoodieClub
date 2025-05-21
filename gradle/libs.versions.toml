@@ -18,7 +18,10 @@ coil = "2.6.0"
 retrofit = "2.11.0"
 okhttp = "4.12.0"
 navigationCompose = "2.7.7"
+datastore = "1.1.1" # O la versión más reciente que encuentres
 
+generativeAi = "0.6.0" # Revisa la última versión estable del SDK de Gemini para Android
+kotlinCoroutines = "1.7.3" # O la versión más reciente que encuentres
 
 # Firebase/Google
 firebaseBom = "33.1.2"
@@ -30,7 +33,9 @@ materialIconsExtended = "1.6.7"
 
 
 [libraries]
+firebase-config = { group = "com.google.firebase", name = "firebase-config-ktx" } # <-- AÑADE ESTA LÍNEA (sin versión si usas BOM)
 # Core & Jetpack
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore-ktx" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -43,6 +48,11 @@ androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifec
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelKtx" } # Usa misma ref actualizada
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" } # Usa ref actualizada
 # --- FIN ---
+# Google AI (Gemini)
+google-ai-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "generativeAi" }
+kotlin-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinCoroutines" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinCoroutines" }
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 
 # Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -75,6 +85,7 @@ okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-i
 
 [plugins]
 # Gradle Plugins
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" } # Si usas Kotlinx Serialization
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

@@ -1,10 +1,13 @@
-package com.example.foodieclub.data.model // Revisa tu paquete
+package com.example.foodieclub.data.model
+
+import com.google.gson.annotations.SerializedName
 
 data class PerfilPublicoDto(
-    val firebaseUid: String?,
-    val nombreMostrado: String?,
-    val fotoUrl: String?,
-    val fechaRegistro: String?, // Recibir como String
-    val numeroRecetas: Int? = 0,
-    val recetasPublicadas: List<RecetaDto>? = emptyList()
+    @SerializedName("firebaseUid") val firebaseUid: String?,
+    @SerializedName("nombreMostrado") val nombreMostrado: String?,
+    @SerializedName("fotoUrl") val fotoUrl: String?,
+    @SerializedName("fechaRegistro") val fechaRegistro: String?,
+    @SerializedName("recetasPublicadas") val recetasPublicadas: List<RecetaDto>?,
+    @SerializedName("numeroRecetas") val numeroRecetas: Int?
+    // ... cualquier otro campo público ...
 )

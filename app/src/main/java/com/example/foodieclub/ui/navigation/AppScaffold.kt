@@ -10,8 +10,9 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.foodieclub.ui.viewmodel.ProfileViewModel // Importar ProfileViewModel
-import com.example.foodieclub.ui.viewmodel.RecipeViewModel // Importar RecipeViewModel
+import com.example.foodieclub.ui.viewmodel.ProfileViewModel
+import com.example.foodieclub.ui.viewmodel.RecipeViewModel
+import com.example.foodieclub.ui.viewmodel.SettingsViewModel // <-- IMPORT NUEVO
 
 // --- Composable para la Barra de Navegación Inferior ---
 @Composable
@@ -20,6 +21,7 @@ fun AppBottomNavigationBar(navController: NavHostController) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
+        // Usar la lista actualizada desde Navigation.kt
         bottomNavItems.forEach { screen ->
             NavigationBarItem(
                 icon = {
@@ -47,14 +49,13 @@ fun AppBottomNavigationBar(navController: NavHostController) {
     }
 }
 
-// --- Composable Principal que configura el Scaffold ---
+// --- Composable Principal que configura el Scaffold con BottomBar y NavHost ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppScaffold(
-    // --- RECIBE LAS INSTANCIAS DE VIEWMODEL DESDE MainActivity ---
     recipeViewModel: RecipeViewModel,
-    profileViewModel: ProfileViewModel, // Para "Mi Perfil"
-    // ---------------------------------------------------------
+    profileViewModel: ProfileViewModel,
+    settingsViewModel: SettingsViewModel, // <-- AÑADIDO: Recibir SettingsViewModel
     onSignOut: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -62,12 +63,12 @@ fun MainAppScaffold(
     Scaffold(
         bottomBar = { AppBottomNavigationBar(navController = navController) }
     ) { innerPadding ->
-        // Pasa las instancias de ViewModel y el callback onSignOut al NavHost
         AppNavHost(
             navController = navController,
             modifier = Modifier.padding(innerPadding),
-            recipeViewModel = recipeViewModel,     // Pasar RecipeVM
-            profileViewModel = profileViewModel,   // Pasar ProfileVM (para Mi Perfil)
+            recipeViewModel = recipeViewModel,
+            profileViewModel = profileViewModel,
+            settingsViewModel = settingsViewModel, // <-- AÑADIDO: Pasar SettingsViewModel a AppNavHost
             onSignOut = onSignOut
         )
     }
