@@ -1,9 +1,5 @@
 package com.example.foodieclub.ui.navigation
 
-// Transiciones
-// Clases Screen
-// Pantallas
-// ViewModels y Factories
 import android.app.Application
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -37,6 +33,7 @@ import com.example.foodieclub.ui.screen.RecipeDetailScreen
 import com.example.foodieclub.ui.screen.RecipeListScreen
 import com.example.foodieclub.ui.screen.RegisterScreen
 import com.example.foodieclub.ui.screen.SettingsScreen
+import com.example.foodieclub.ui.screen.ShoppingListScreen // <-- IMPORTA LA NUEVA PANTALLA
 import com.example.foodieclub.ui.viewmodel.AuthState
 import com.example.foodieclub.ui.viewmodel.AuthViewModel
 import com.example.foodieclub.ui.viewmodel.ProfileViewModel
@@ -44,7 +41,7 @@ import com.example.foodieclub.ui.viewmodel.RecipeDetailViewModel
 import com.example.foodieclub.ui.viewmodel.RecipeDetailViewModelFactory
 import com.example.foodieclub.ui.viewmodel.RecipeViewModel
 import com.example.foodieclub.ui.viewmodel.SettingsViewModel
-import com.example.foodieclub.ui.viewmodel.provideProfileViewModelFactory
+import com.example.foodieclub.ui.viewmodel.provideProfileViewModelFactory // Asumiendo que esta función existe y está definida
 
 // --- GRAFO DE NAVEGACIÓN PRINCIPAL ---
 @Composable
@@ -90,6 +87,13 @@ fun AppNavHost(
                 }
             )
         }
+
+        // --- NUEVO DESTINO PARA LA LISTA DE LA COMPRA ---
+        composable(Screen.ShoppingList.route) {
+            ShoppingListScreen() // El ShoppingListViewModel se obtendrá con viewModel() por defecto dentro de la pantalla
+        }
+        // -------------------------------------------------
+
         composable(Screen.MyProfile.route) {
             MyProfileScreen(
                 profileViewModel = profileViewModel, // ViewModel del perfil del usuario actual
@@ -144,7 +148,7 @@ fun AppNavHost(
                     onNavigateBack = { navController.popBackStack() }
                 )
             } else {
-                navController.popBackStack()
+                navController.popBackStack() // O manejar error/redirigir
             }
         }
         composable(Screen.RecipeDetail.routeWithArgs,
@@ -170,7 +174,7 @@ fun AppNavHost(
                     onNavigateToProfile = { userId -> navController.navigate(Screen.UserProfile.createRoute(userId)) }
                 )
             } else {
-                navController.popBackStack()
+                navController.popBackStack() // O manejar error/redirigir
             }
         }
         composable(Screen.UserProfile.routeWithArgs,
@@ -192,13 +196,13 @@ fun AppNavHost(
                     onNavigateBack = { navController.popBackStack() }
                 )
             } else {
-                navController.popBackStack()
+                navController.popBackStack() // O manejar error/redirigir
             }
         }
     }
 }
 
-// --- GRAFO DE NAVEGACIÓN PARA AUTENTICACIÓN (Sin cambios respecto a la última versión que te pasé) ---
+// --- GRAFO DE NAVEGACIÓN PARA AUTENTICACIÓN ---
 fun NavGraphBuilder.authGraph(
     navController: NavHostController,
     onLoginSuccess: () -> Unit
@@ -208,31 +212,33 @@ fun NavGraphBuilder.authGraph(
         route = Screen.AuthRoot.route
     ) {
         composable(Screen.Login.route) {
-            val authViewModel: AuthViewModel = viewModel()
+            val authViewModel: AuthViewModel = viewModel() // Asume que AuthViewModel no necesita factory o la obtiene por defecto
             val authState by authViewModel.authState.collectAsState()
             LaunchedEffect(authState) {
                 if (authState is AuthState.Authenticated) {
                     onLoginSuccess()
-                    authViewModel.resetAuthState()
+                    // authViewModel.resetAuthState() // Considera si resetear aquí o en el destino
                 }
             }
             LoginScreen(
                 authViewModel = authViewModel,
-                onLoginSuccess = { /* Manejado por LaunchedEffect */ },
+                onLoginSuccess = { /* Ya no se necesita aquí, manejado por LaunchedEffect */ },
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) }
             )
         }
         composable(Screen.Register.route) {
             val authViewModel: AuthViewModel = viewModel()
             val authState by authViewModel.authState.collectAsState()
-            LaunchedEffect(authState) {
-                if (authState is AuthState.Authenticated) {
-                    authViewModel.resetAuthState()
-                }
-            }
+            // No es necesario LaunchedEffect aquí si el registro no navega automáticamente al mismo sitio que el login
+            // o si la navegación se maneja de otra forma.
             RegisterScreen(
                 authViewModel = authViewModel,
-                onRegisterSuccess = { /* Manejado por LaunchedEffect */ },
+                onRegisterSuccess = {
+                    // Podrías querer navegar al login o directamente a home si el registro también autentica
+                    // Por ahora, lo dejamos para que el usuario inicie sesión manualmente después del registro
+                    // o para que navegues desde el RegisterScreen si el AuthState cambia a Authenticated.
+                    // Ejemplo: navController.popBackStack() para volver al Login
+                },
                 onNavigateToLogin = { navController.popBackStack() }
             )
         }
