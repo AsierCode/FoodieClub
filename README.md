@@ -1,7 +1,6 @@
-#  फूडieClub (FoodieClub) 🍲✨
+#  FoodieClub 🍲✨
 
-![FoodieClub Banner](https://i.ibb.co/84smVnd/foodieclub-banner-cocina.png)
-<!-- Opcional: Si subes la imagen a tu repositorio, por ejemplo en una carpeta "assets": -->
+![FoodieClub Banner](./foodieclub-banner-cocina.png)<!-- Opcional: Si subes la imagen a tu repositorio, por ejemplo en una carpeta "assets": -->
 <!-- ![FoodieClub Banner](./assets/foodieclub-banner-cocina.png) -->
 
 Bienvenido a FoodieClub, tu compañero culinario definitivo. Descubre, crea, comparte y organiza tus recetas favoritas, ¡todo en un solo lugar! Además, obtén información nutricional estimada para tus platos con nuestra innovadora función de IA. Por AsierNG.
