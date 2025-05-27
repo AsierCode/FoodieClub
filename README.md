@@ -1,6 +1,6 @@
 #  FoodieClub 🍲✨
 
-![FoodieClub Banner](https://i.ibb.co/84smVnd/foodieclub-banner-cocina.png)
+![FoodieClub Banner]([https://i.ibb.co/84smVnd/foodieclub-banner-cocina.png](https://ibb.co/84smVndp))
 <!-- Opcional: Si subes la imagen a tu repositorio, por ejemplo en una carpeta "assets": -->
 <!-- ![FoodieClub Banner](./assets/foodieclub-banner-cocina.png) -->
 
